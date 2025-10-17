@@ -14,4 +14,3 @@
 ---
 
 Репозиторий обновляется по мере выполнения заданий.
-# DA-3-23-Feature-Generation-Weighted-Aggregates
