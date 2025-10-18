@@ -61,6 +61,7 @@ def addWeights(df: pd.DataFrame, base_col: str, by: str, wmin: float, wmax: floa
 # features: список числовых признаков для усреднения
 # g: объект группировки df.groupby(by)
 # w_products: покомпонентные произведения признаков на вес
+# wmean: таблица взвешенных средних
 # out: объединение обычных и взвешенных средних по группам
 # f: текущее имя признака из features
 # denom: знаменатель
@@ -143,10 +144,7 @@ def safeСsv(df: pd.DataFrame, path: Path):
     try:
         df_fmt = df.map(fmt_float)
     except AttributeError:
-        import warnings
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", FutureWarning)
-            df_fmt = df.applymap(fmt_float)
+        df_fmt = df.applymap(fmt_float)
 
     from io import StringIO
     buf = StringIO()
