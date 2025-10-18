@@ -5,11 +5,6 @@ import pandas as pd
 from pathlib import Path
 
 # ----------/базовые проверки/----------
-def fail(msg: str, code: int = 2):
-    """Выводит сообщение об ошибке и завершает программу с заданным кодом выхода"""
-    print(f"Ошибка: {msg}", file=sys.stderr)
-    sys.exit(code)
-
 def ensureCols(df: pd.DataFrame, cols: list[str]):
     """Проверяет, что в DataFrame присутствуют все указанные столбцы"""
     miss = [c for c in cols if c not in df.columns]
@@ -62,7 +57,8 @@ def addWeights(df: pd.DataFrame, base_col: str, by: str, wmin: float, wmax: floa
         raise ValueError("Неположительные или некорректные суммы весов в некоторых группах")
     return df
 
-# ----------/сравнение/----------
+
+# ----------/агрегаты/----------
 # features: список числовых признаков для усреднения
 # g: объект группировки df.groupby(by)
 # w_products: покомпонентные произведения признаков на вес
@@ -134,7 +130,7 @@ def readСsv(path: Path) -> pd.DataFrame:
     return df
 
 
-# df_fmt: dataFrame после применения форматирования к числам
+# df_fmt: DataFrame после применения форматирования к числам
 def safeСsv(df: pd.DataFrame, path: Path):
     """Сохраняет DataFrame в CSV с выравниванием чисел и пробелом после ';'"""
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -188,35 +184,27 @@ def validateАrgs(a):
 # ----------/основной блок выполнения/----------
 def main():
     """Основная функция: читает данные, рассчитывает веса и средние, сохраняет результаты"""
-    try:
-        args = parseАrgs()
-        validateАrgs(args)
+    args = parseАrgs()
+    validateАrgs(args)
 
-        df = readСsv(Path(args.in_data))
-        ensureCols(df, [args.group_col, args.weight_base_col] + args.features)
-        df = ensureNumeric(df, [args.weight_base_col] + args.features, allow_nan=False)
+    df = readСsv(Path(args.in_data))
+    ensureCols(df, [args.group_col, args.weight_base_col] + args.features)
+    df = ensureNumeric(df, [args.weight_base_col] + args.features, allow_nan=False)
 
-        if df[args.group_col].isna().any():
-            raise ValueError(f"В столбце группы обнаружены пустые значения: '{args.group_col}'")
+    if df[args.group_col].isna().any():
+        raise ValueError(f"В столбце группы обнаружены пустые значения: '{args.group_col}'")
 
-        df_w = addWeights(df, args.weight_base_col, args.group_col, args.wmin, args.wmax)
-        cmp_df = Weighted_and_Mean(df_w, args.group_col, args.features)
-        df_out = attachWmeans(df_w, args.group_col, args.features)
+    df_w = addWeights(df, args.weight_base_col, args.group_col, args.wmin, args.wmax)
+    cmp_df = Weighted_and_Mean(df_w, args.group_col, args.features)
+    df_out = attachWmeans(df_w, args.group_col, args.features)
 
-        safeСsv(df_out, Path(args.out_data))
-        safeСsv(cmp_df, Path(args.out_report))
+    safeСsv(df_out, Path(args.out_data))
+    safeСsv(cmp_df, Path(args.out_report))
 
-        k = int((cmp_df["diff_%"] > float(args.threshold)).sum())
-        print(f"ROWS = {len(df_out)} / DIFF > {args.threshold}% = {k}")
-        print(f"Saved:\n - {args.out_data}\n - {args.out_report}")
-        sys.exit(0)
-
-    except FileNotFoundError as e:
-        fail(str(e), 66)
-    except (ValueError, AssertionError) as e:
-        fail(str(e), 2)
-    except Exception as e:
-        fail(f"Unexpected: {type(e).__name__}: {e}", 1)
+    k = int((cmp_df["diff_%"] > float(args.threshold)).sum())
+    print(f"Rows = {len(df_out)} / Diff > {args.threshold}% = {k}")
+    print(f"Saved:\n - {args.out_data}\n - {args.out_report}")
+    sys.exit(0)
 
 if __name__ == "__main__":
     main()
