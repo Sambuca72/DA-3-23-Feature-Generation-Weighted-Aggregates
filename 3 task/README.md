@@ -25,11 +25,12 @@ pip install -r requirements.txt
 ## Запуск программы
 
 1. **Открой проект в VS Code.**  
-   Убедись, что файл `2task.py` открыт в редакторе.
+   Убедись, что файлы `weight.py` и `data.csv` открыты в редакторе.
 
 2. **Открыть терминал**  
 - Ввести данную строку:
 ```bash
-python table.py --path people.txt --col-a Рост --col-b Рост_отца --new-col Разница_роста  --save-plot hist.png --drop-na --min-val 0.5 --max-val 2.5
+python ok.py --in-data data.csv --group-col group --features x1 x2 x3 x4 --weight-base-col base --wmin 10 --wmax 20 --threshold 5 --out-data weighted_features.csv --out-report compare_means.csv
 ```
-Чтобы ознакомится с аргументами парсинга, для этого есть команда `python table.py --help`, которая также вводится в консоли
+- После того как завершится выполнение скрипта появится два файла: `compare_means.csv` и  `weighted_features.csv` со всеми данными о взвешивании
+Чтобы ознакомится с аргументами парсинга, для этого есть команда `python weight.py --help`, которая также вводится в консоли
