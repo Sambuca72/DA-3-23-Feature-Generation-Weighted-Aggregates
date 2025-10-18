@@ -16,6 +16,7 @@ def ensureCols(df: pd.DataFrame, cols: list[str]):
     if miss:
         raise ValueError(f"Отсутвующие столбцы: {miss}")
 
+# s: временная серия — результат приведения столбца к числам
 def ensureNumeric(df: pd.DataFrame, cols: list[str], allow_nan: bool = False):
     """Преобразует выбранные столбцы в числовой формат и проверяет отсутствие NaN"""
     bad = []
@@ -32,9 +33,13 @@ def diff(a: float, b: float, eps: float = 1e-12) -> float:
     """Возвращает относительное различие между двумя числами в процентах"""
     return abs(a - b) / max(abs(a), abs(b), eps) * 100.0
 
-
 # ----------/веса/----------
-def add_weights(df: pd.DataFrame, base_col: str, by: str, wmin: float, wmax: float) -> pd.DataFrame:
+# by: столбец группировки
+# g: объект группировки df.groupby(by) (удобно для transform)
+# m: поэлементный вектор минимумов base_col внутри своей группы
+# M: поэлементный вектор максимумов base_col внутри своей группы
+# z: нормированное значение base_col в [0,1] внутри своей группы
+def addWeights(df: pd.DataFrame, base_col: str, by: str, wmin: float, wmax: float) -> pd.DataFrame:
     """Вычисляет веса '__weight__' на основе столбца base_col внутри каждой группы by"""
     ensureCols(df, [base_col, by])
     if not (np.isfinite(wmin) and np.isfinite(wmax) and wmax > wmin):
@@ -57,8 +62,15 @@ def add_weights(df: pd.DataFrame, base_col: str, by: str, wmin: float, wmax: flo
         raise ValueError("Неположительные или некорректные суммы весов в некоторых группах")
     return df
 
-
-# ----------/агрегаты/----------
+# ----------/сравнение/----------
+# features: список числовых признаков для усреднения
+# g: объект группировки df.groupby(by)
+# w_products: покомпонентные произведения признаков на вес
+# wmean: таблица взвешенных средних
+# out: объединение обычных и взвешенных средних по группам
+# f: текущее имя признака из features
+# denom: знаменатель
+# num: числитель
 def Weighted_and_Mean(df: pd.DataFrame, by: str, features: list[str]) -> pd.DataFrame:
     """Сравнивает обычные и взвешенные средние по признакам features для каждой группы"""
     ensureCols(df, features + [by, "__weight__"])
@@ -69,8 +81,8 @@ def Weighted_and_Mean(df: pd.DataFrame, by: str, features: list[str]) -> pd.Data
 
     w_products = df[features].multiply(df["__weight__"], axis=0)
     num = w_products.groupby(df[by], observed=True, sort=False).sum()
-    den = df.groupby(by, observed=True, sort=False)["__weight__"].sum()
-    wmean = num.div(den, axis=0).rename(columns=lambda c: f"{c}__wmean")
+    denom = df.groupby(by, observed=True, sort=False)["__weight__"].sum()
+    wmean = num.div(denom, axis=0).rename(columns=lambda c: f"{c}__wmean")
     out = mean.join(wmean)
 
     records = []
@@ -87,6 +99,8 @@ def Weighted_and_Mean(df: pd.DataFrame, by: str, features: list[str]) -> pd.Data
             })
     return pd.DataFrame.from_records(records)
 
+# f"__wmean_by_{by}": суффикс - чтобы показать взвешанное среднее по группе
+# df_out: исходные строки + присоединённые групповые взвешенные средние
 def attachWmeans(df: pd.DataFrame, by: str, features: list[str]) -> pd.DataFrame:
     """Добавляет к исходному DataFrame взвешенные средние по каждой группе"""
     ensureCols(df, features + [by, "__weight__"])
@@ -105,7 +119,7 @@ def attachWmeans(df: pd.DataFrame, by: str, features: list[str]) -> pd.DataFrame
 
 
 # ----------/чтение и запись CSV/----------
-def read_input_csv(path: Path) -> pd.DataFrame:
+def readСsv(path: Path) -> pd.DataFrame:
     """Читает CSV-файл, проверяет его корректность и возвращает DataFrame"""
     if not path.exists():
         raise FileNotFoundError(f"Входной файл не найден: {path}")
@@ -120,7 +134,8 @@ def read_input_csv(path: Path) -> pd.DataFrame:
     return df
 
 
-def safe_write_csv(df: pd.DataFrame, path: Path):
+# df_fmt: dataFrame после применения форматирования к числам
+def safeСsv(df: pd.DataFrame, path: Path):
     """Сохраняет DataFrame в CSV с выравниванием чисел и пробелом после ';'"""
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(path.suffix + ".tmp")
@@ -148,7 +163,7 @@ def safe_write_csv(df: pd.DataFrame, path: Path):
     tmp.replace(path)
 
 # ----------/аргументы командной строки/----------
-def parse_args():
+def parseАrgs():
     """Разбирает аргументы командной строки для анализа взвешенных средних"""
     p = argparse.ArgumentParser(description="DA-3-23: сравнение обычных и взвешенных средних")
     p.add_argument("--in-data", required=True, help="входной CSV-файл с данными")
@@ -162,7 +177,8 @@ def parse_args():
     p.add_argument("--out-report", default="compare_means.csv", help="файл отчёта со сравнением средних")
     return p.parse_args()
 
-def validate_args(a):
+# a: объект с распарсенными аргументами
+def validateАrgs(a):
     """Проверяет диапазоны и значения аргументов командной строки"""
     if a.wmin >= a.wmax:
         raise ValueError("wmin должен быть меньше wmax")
@@ -173,22 +189,22 @@ def validate_args(a):
 def main():
     """Основная функция: читает данные, рассчитывает веса и средние, сохраняет результаты"""
     try:
-        args = parse_args()
-        validate_args(args)
+        args = parseАrgs()
+        validateАrgs(args)
 
-        df = read_input_csv(Path(args.in_data))
+        df = readСsv(Path(args.in_data))
         ensureCols(df, [args.group_col, args.weight_base_col] + args.features)
         df = ensureNumeric(df, [args.weight_base_col] + args.features, allow_nan=False)
 
         if df[args.group_col].isna().any():
             raise ValueError(f"В столбце группы обнаружены пустые значения: '{args.group_col}'")
 
-        df_w = add_weights(df, args.weight_base_col, args.group_col, args.wmin, args.wmax)
+        df_w = addWeights(df, args.weight_base_col, args.group_col, args.wmin, args.wmax)
         cmp_df = Weighted_and_Mean(df_w, args.group_col, args.features)
         df_out = attachWmeans(df_w, args.group_col, args.features)
 
-        safe_write_csv(df_out, Path(args.out_data))
-        safe_write_csv(cmp_df, Path(args.out_report))
+        safeСsv(df_out, Path(args.out_data))
+        safeСsv(cmp_df, Path(args.out_report))
 
         k = int((cmp_df["diff_%"] > float(args.threshold)).sum())
         print(f"ROWS = {len(df_out)} / DIFF > {args.threshold}% = {k}")
@@ -204,4 +220,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
