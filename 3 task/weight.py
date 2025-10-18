@@ -61,7 +61,6 @@ def addWeights(df: pd.DataFrame, base_col: str, by: str, wmin: float, wmax: floa
 # features: список числовых признаков для усреднения
 # g: объект группировки df.groupby(by)
 # w_products: покомпонентные произведения признаков на вес
-# wmean: таблица взвешенных средних
 # out: объединение обычных и взвешенных средних по группам
 # f: текущее имя признака из features
 # denom: знаменатель
