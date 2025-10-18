@@ -57,7 +57,6 @@ def addWeights(df: pd.DataFrame, base_col: str, by: str, wmin: float, wmax: floa
         raise ValueError("Неположительные или некорректные суммы весов в некоторых группах")
     return df
 
-
 # ----------/агрегаты/----------
 # features: список числовых признаков для усреднения
 # g: объект группировки df.groupby(by)
