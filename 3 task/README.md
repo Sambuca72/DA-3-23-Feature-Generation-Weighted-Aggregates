@@ -32,5 +32,6 @@ pip install -r requirements.txt
 ```bash
 python ok.py --in-data data.csv --group-col group --features x1 x2 x3 x4 --weight-base-col base --wmin 10 --wmax 20 --threshold 5 --out-data weighted_features.csv --out-report compare_means.csv
 ```
-- После того как завершится выполнение скрипта появится два файла: `compare_means.csv` и  `weighted_features.csv` со всеми данными о взвешивании
+- После того как завершится выполнение скрипта появится два файла: `compare_means.csv` и  `weighted_features.csv` со всеми данными о взвешевании
+
 Чтобы ознакомится с аргументами парсинга, для этого есть команда `python weight.py --help`, которая также вводится в консоли
