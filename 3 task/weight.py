@@ -138,7 +138,7 @@ def safeСsv(df: pd.DataFrame, path: Path):
     def fmt_float(x):
         """Возвращает float с шестью знаками после запятой (фиксированная длина)"""
         if isinstance(x, float):
-            return f"{x:.6f}"
+            return f"{x:.6f}".rstrip("0")
         return x
 
     try:
